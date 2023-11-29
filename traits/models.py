@@ -6,3 +6,4 @@ class Trait (models.Model):
         'pets.Pet',
         related_name = 'traits'
     )
+    created_at = models.DateTimeField(auto_now_add=True)
