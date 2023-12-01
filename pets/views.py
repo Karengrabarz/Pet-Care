@@ -23,21 +23,23 @@ class PetView(APIView, PageNumberPagination):
 
         pet = Pet.objects.create(**serializer.validated_data,group=group)
 
-        traits = []
-
         for current_trait_data in traits_data:
             try:
                 trait = Trait.objects.get(name__iexact=current_trait_data["name"])
             except Trait.DoesNotExist:
                 trait = Trait.objects.create(**current_trait_data)
-            traits.append(trait)
             pet.traits.add(trait)
 
         serializer = PetSerializer(pet)
         return Response(serializer.data,status.HTTP_201_CREATED)
 
     def get(self, request:Request)-> Response:
-        pets = Pet.objects.all()
+        by_trait = request.query_params.get('trait',None)
+      
+        if by_trait:
+            pets = Pet.objects.filter(traits__name__iexact=by_trait)
+        else:
+            pets = Pet.objects.all()
         result = self.paginate_queryset(pets,request)
         serializer = PetSerializer(result, many=True)
         return self.get_paginated_response(serializer.data)
@@ -76,6 +78,29 @@ class PetDetailView(APIView):
                 serializer.errors,
                 status.HTTP_400_BAD_REQUEST,
             )
+        group_data = serializer.validated_data.pop('group',None)
+
+        if group_data:
+            try:
+                group = Group.objects.get(**group_data)
+            except Group.DoesNotExist:
+                group = Group.objects.create(**group_data)
+
+        found_pet.group=group
+
+        traits_data = serializer.validated_data.pop('traits',None)
+        if traits_data:
+            found_pet.traits.clear()
+        
+            for current_trait_data in traits_data:
+                try:
+                    trait = Trait.objects.get(name__iexact=current_trait_data["name"])
+                except Trait.DoesNotExist:
+                    trait = Trait.objects.create(**current_trait_data)
+                
+                found_pet.traits.add(trait)
+            
+
         for key, value in serializer.validated_data.items():
             setattr(found_pet, key, value)
         found_pet.save()
