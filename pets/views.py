@@ -51,7 +51,7 @@ class PetDetailView(APIView):
         except Pet.DoesNotExist:
             return Response({
                 "detail": "Not found."
-            },status.HTTP_400_BAD_REQUEST)
+            },status.HTTP_404_NOT_FOUND)
         serializer = PetSerializer(found_pet)
         return Response(serializer.data,status.HTTP_200_OK)
     
@@ -61,7 +61,7 @@ class PetDetailView(APIView):
         except Pet.DoesNotExist:
             return Response({
                 "detail": "Not found."
-            },status.HTTP_400_BAD_REQUEST)
+            },status.HTTP_404_NOT_FOUND)
         found_pet.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
     
@@ -70,7 +70,7 @@ class PetDetailView(APIView):
             found_pet = Pet.objects.get(pk=pet_id)
         except Pet.DoesNotExist:
             return Response(
-                {"detail": "Not found."}, status.HTTP_400_BAD_REQUEST
+                {"detail": "Not found."}, status.HTTP_404_NOT_FOUND
                 )
         serializer = PetSerializer(data = request.data, partial=True)
         if not serializer.is_valid():
@@ -85,9 +85,8 @@ class PetDetailView(APIView):
                 group = Group.objects.get(**group_data)
             except Group.DoesNotExist:
                 group = Group.objects.create(**group_data)
-
-        found_pet.group=group
-
+                found_pet.group=group
+       
         traits_data = serializer.validated_data.pop('traits',None)
         if traits_data:
             found_pet.traits.clear()
@@ -97,12 +96,12 @@ class PetDetailView(APIView):
                     trait = Trait.objects.get(name__iexact=current_trait_data["name"])
                 except Trait.DoesNotExist:
                     trait = Trait.objects.create(**current_trait_data)
-                
-                found_pet.traits.add(trait)
+            found_pet.traits.add(trait)
             
 
         for key, value in serializer.validated_data.items():
             setattr(found_pet, key, value)
         found_pet.save()
         serializer = PetSerializer(found_pet)
+     
         return Response(serializer.data, status.HTTP_200_OK)
